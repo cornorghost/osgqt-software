@@ -77,6 +77,8 @@ void osgQtViewer::initMenu()
 //初始化
 void osgQtViewer::init()
 {
+	qDebug() << "in init";
+	qDebug() << QString::number((unsigned int)QThread::currentThreadId());
 	//g_widget = new QtOSGWidget(ui->widget);
 	
 	//创建osg视图
@@ -86,9 +88,11 @@ void osgQtViewer::init()
 
 	g_widget->setMinimumWidth(900);
 
+	FileHandler *fileHandler = new FileHandler;
+
 	m_objThread = new QThread();
 
-	g_widget->moveToThread(m_objThread);
+	fileHandler->moveToThread(m_objThread);
 
 	m_objThread->start();
 
@@ -107,8 +111,17 @@ void osgQtViewer::init()
 	ui->tableWidget->setEditTriggers(QAbstractItemView::NoEditTriggers);
 	ui->tableWidget->verticalHeader()->hide();
 
+
+	qRegisterMetaType<osg::ref_ptr<osg::Vec3Array>>("osg::ref_ptr<osg::Vec3Array>");
+	qRegisterMetaType<osg::ref_ptr<osg::Vec4Array>>("osg::ref_ptr<osg::Vec4Array>");
+	qRegisterMetaType<PointInfos>("PointInfos");
+	
 	//函数信号
-	connect(this, SIGNAL(selected(QStringList)), this, SLOT(readFiles(QStringList))); //读取文件
+	connect(this, SIGNAL(selected(QStringList, int)), fileHandler, SLOT(readFiles(QStringList, int))); //读取文件
+
+	connect(fileHandler, &FileHandler::toUpdateTXT, this, &osgQtViewer::updateTXT);//更新txt
+
+	connect(fileHandler, &FileHandler::toUpdateOSG, this, &osgQtViewer::updateOSG);//更新osg
 
 	connect(ui->treeWidget, SIGNAL(itemChanged(QTreeWidgetItem *,int)), this, SLOT(checkChange(QTreeWidgetItem *, int)));
 
@@ -188,140 +201,165 @@ void osgQtViewer::saveResentFiles()
 
 }
 
-//读txt
-void osgQtViewer::readTXT(QString filePath, int index)
+////读txt
+//void osgQtViewer::readTXT(QString filePath, int index)
+//{
+//	PointInfos point;//存储信息
+//
+//	//转换为char *
+//	QByteArray cpath = filePath.toLocal8Bit();
+//	char *name = cpath.data();
+//	qDebug() << filePath;
+//
+//	ifstream fin(name, ios::binary);
+//	if (!fin)
+//	{
+//		qDebug() << "DataFile does not exist!!!";
+//	}
+//	else
+//	{
+//		//文件大小
+//
+//		//fin.seekg(0, ios_base::end);
+//		//point.fileSize = fin.tellg();
+//		//fin.clear();//重置
+//		//fin.seekg(std::ios::beg);//重置为开头
+//
+//		int point_size = 0;
+//		QString file_full, file_name, file_path, file_suffix;
+//		QFileInfo fileinfo;
+//		fileinfo = QFileInfo(filePath);
+//		file_name = fileinfo.fileName();//文件名
+//		file_path = fileinfo.absolutePath();
+//		point.fileSize = fileinfo.size();
+//
+//		//读取点云结构
+//		int col_temp = 0;
+//		char a[512];
+//		string sa;
+//		fin.getline(a, 512, '\n');
+//		stringstream ssa;
+//		ssa << a;
+//		while (ssa >> sa)
+//		{
+//			col_temp++;
+//		}
+//		point.structureSize = col_temp;
+//		point.fileName = file_name;
+//		point.index = index;
+//
+//		fin.clear();//重置
+//		fin.seekg(std::ios::beg);//重置为开头
+//
+//		qDebug() << point.structureSize;
+//		if (point.structureSize == 6)
+//		{
+//			point.structure = QString("xyzrgb");
+//			double max_x=DBL_MIN, min_x=DBL_MAX, max_y= DBL_MIN, min_y = DBL_MAX, max_z= DBL_MIN, min_z = DBL_MAX;
+//			osg::ref_ptr<osg::Vec3Array> vertices = new osg::Vec3Array;
+//			osg::ref_ptr<osg::Vec4Array> colors = new osg::Vec4Array;
+//			pcl::PointCloud<pcl::PointXYZRGB>::Ptr p(new pcl::PointCloud<pcl::PointXYZRGB>);
+//			pcl::PointXYZRGB t;
+//			string s;
+//			stringstream ss;
+//			while (!fin.eof())
+//			{
+//				double r, g, b;
+//				getline(fin, s, '\n');
+//				point_size++;
+//				ss << s;
+//				ss >> t.x >> t.y >> t.z >> r >> g >> b;
+//				vertices->push_back(osg::Vec3f(t.x, t.y, t.z));
+//				colors->push_back(osg::Vec4f(r / 255.0, g / 255.0, b / 255.0, 1.0));
+//				if(fin.tellg()%200000==0)
+//				qDebug() << t.x << t.y << t.z << r << g << b;
+//				int32_t frgb = 0;
+//				frgb = (int)r << 16 | (int)g << 8 | (int)b;
+//				t.rgb = *reinterpret_cast<float*>(&frgb);
+//				p->push_back(t);
+//				s.clear();
+//				ss.clear();
+//				//计算包围盒
+//				min_x = min_x < t.x ? min_x : t.x;
+//				max_x = max_x > t.x ? max_x : t.x;
+//				min_y = min_y < t.y ? min_y : t.y;
+//				max_y = max_y > t.y ? max_y : t.y;
+//				min_z = min_z < t.z ? min_z : t.z;
+//				max_z = max_z > t.z ? max_z : t.z;
+//			}
+//			ss.clear();
+//			fin.close();
+//			qDebug() << "ok";
+//
+//			point.max_x = max_x; point.max_y = max_y; point.max_z = max_z;
+//			point.min_x = min_x; point.min_y = min_y; point.min_z = min_z;
+//			point.center_x = (max_x + min_x) / 2; point.center_y = (max_y + min_y) / 2; point.center_z = (max_z + min_z) / 2;
+//			point.pointSize = point_size;
+//			point.point = p;
+//
+//			pointsInfos[file_name] = point;
+//
+//			addList(point.fileName);
+//			fileNames.push_back(file_name);
+//			filePathes.push_back(filePath);
+//			resentFiles.insert(filePath);
+//			g_widget->addNode(vertices, colors, file_name);
+//		}
+//
+//	}
+//}
+//
+////读osg
+//void osgQtViewer::readOSG(QString filePath, int index)
+//{
+//	QString file_full, file_name, file_path, file_suffix;
+//	QFileInfo fileinfo;
+//	fileinfo = QFileInfo(filePath);
+//	file_name = fileinfo.fileName();//文件名
+//	file_path = fileinfo.absolutePath();//文件路径
+//
+//	PointInfos point;//存储信息
+//
+//	point.fileName = file_name;
+//	point.index = index;
+//
+//	QByteArray cpath = filePath.toLocal8Bit();
+//	char *filename = cpath.data();
+//
+//	osg::ref_ptr<osg::Node> node = osgDB::readNodeFile(filename);
+//
+//	addList(file_name);
+//
+//	fileNames.push_back(file_name);
+//	filePathes.push_back(filePath);
+//	resentFiles.insert(filePath);
+//
+//	g_widget->addNode(node, file_name);
+//}
+
+//读取txt
+void osgQtViewer::updateTXT(QString filePath, QString fileName, osg::ref_ptr<osg::Vec3Array> vertices, osg::ref_ptr<osg::Vec4Array> colors, PointInfos point)
 {
-	PointInfos point;//存储信息
-
-	//转换为char *
-	QByteArray cpath = filePath.toLocal8Bit();
-	char *name = cpath.data();
-	qDebug() << filePath;
-
-	ifstream fin(name, ios::binary);
-	if (!fin)
-	{
-		qDebug() << "DataFile does not exist!!!";
-	}
-	else
-	{
-		//文件大小
-
-		//fin.seekg(0, ios_base::end);
-		//point.fileSize = fin.tellg();
-		//fin.clear();//重置
-		//fin.seekg(std::ios::beg);//重置为开头
-
-		int point_size = 0;
-		QString file_full, file_name, file_path, file_suffix;
-		QFileInfo fileinfo;
-		fileinfo = QFileInfo(filePath);
-		file_name = fileinfo.fileName();//文件名
-		file_path = fileinfo.absolutePath();
-		point.fileSize = fileinfo.size();
-
-		//读取点云结构
-		int col_temp = 0;
-		char a[512];
-		string sa;
-		fin.getline(a, 512, '\n');
-		stringstream ssa;
-		ssa << a;
-		while (ssa >> sa)
-		{
-			col_temp++;
-		}
-		point.structureSize = col_temp;
-		point.fileName = file_name;
-		point.index = index;
-
-		fin.clear();//重置
-		fin.seekg(std::ios::beg);//重置为开头
-
-		qDebug() << point.structureSize;
-		if (point.structureSize == 6)
-		{
-			point.structure = QString("xyzrgb");
-			double max_x=DBL_MIN, min_x=DBL_MAX, max_y= DBL_MIN, min_y = DBL_MAX, max_z= DBL_MIN, min_z = DBL_MAX;
-			osg::ref_ptr<osg::Vec3Array> vertices = new osg::Vec3Array;
-			osg::ref_ptr<osg::Vec4Array> colors = new osg::Vec4Array;
-			pcl::PointCloud<pcl::PointXYZRGB>::Ptr p(new pcl::PointCloud<pcl::PointXYZRGB>);
-			pcl::PointXYZRGB t;
-			string s;
-			stringstream ss;
-			while (!fin.eof())
-			{
-				double r, g, b;
-				getline(fin, s, '\n');
-				point_size++;
-				ss << s;
-				ss >> t.x >> t.y >> t.z >> r >> g >> b;
-				vertices->push_back(osg::Vec3f(t.x, t.y, t.z));
-				colors->push_back(osg::Vec4f(r / 255.0, g / 255.0, b / 255.0, 1.0));
-				if(fin.tellg()%200000==0)
-				qDebug() << t.x << t.y << t.z << r << g << b;
-				int32_t frgb = 0;
-				frgb = (int)r << 16 | (int)g << 8 | (int)b;
-				t.rgb = *reinterpret_cast<float*>(&frgb);
-				p->push_back(t);
-				s.clear();
-				ss.clear();
-				//计算包围盒
-				min_x = min_x < t.x ? min_x : t.x;
-				max_x = max_x > t.x ? max_x : t.x;
-				min_y = min_y < t.y ? min_y : t.y;
-				max_y = max_y > t.y ? max_y : t.y;
-				min_z = min_z < t.z ? min_z : t.z;
-				max_z = max_z > t.z ? max_z : t.z;
-			}
-			ss.clear();
-			fin.close();
-			qDebug() << "ok";
-
-			point.max_x = max_x; point.max_y = max_y; point.max_z = max_z;
-			point.min_x = min_x; point.min_y = min_y; point.min_z = min_z;
-			point.center_x = (max_x + min_x) / 2; point.center_y = (max_y + min_y) / 2; point.center_z = (max_z + min_z) / 2;
-			point.pointSize = point_size;
-			point.point = p;
-
-			pointsInfos[file_name] = point;
-
-			addList(point.fileName);
-			fileNames.push_back(file_name);
-			filePathes.push_back(filePath);
-			resentFiles.insert(filePath);
-			g_widget->addNode(vertices, colors, file_name);
-		}
-
-	}
+	qDebug() << "txt";
+	pointsInfos[fileName] = point;
+	addList(fileName);
+	fileNames.push_back(fileName);
+	filePathes.push_back(filePath);
+	resentFiles.insert(filePath);
+	g_widget->addNode(vertices, colors, fileName);
 }
 
-//读osg
-void osgQtViewer::readOSG(QString filePath, int index)
+//读取osg
+void osgQtViewer::updateOSG(QString filePath, QString fileName, osg::ref_ptr<osg::Node> node, PointInfos point)
 {
-	QString file_full, file_name, file_path, file_suffix;
-	QFileInfo fileinfo;
-	fileinfo = QFileInfo(filePath);
-	file_name = fileinfo.fileName();//文件名
-	file_path = fileinfo.absolutePath();//文件路径
+	qDebug() << "osg";
+	addList(fileName);
 
-	PointInfos point;//存储信息
-
-	point.fileName = file_name;
-	point.index = index;
-
-	QByteArray cpath = filePath.toLocal8Bit();
-	char *filename = cpath.data();
-
-	osg::ref_ptr<osg::Node> node = osgDB::readNodeFile(filename);
-
-	addList(file_name);
-
-	fileNames.push_back(file_name);
+	fileNames.push_back(fileName);
 	filePathes.push_back(filePath);
 	resentFiles.insert(filePath);
 
-	g_widget->addNode(node, file_name);
+	g_widget->addNode(node, fileName);
 }
 
 //选择文件
@@ -368,43 +406,43 @@ void osgQtViewer::selectFile()
 			//qDebug() << " " << file_name << " " << file_path << " " << file_suffix;
 		}
 
-		emit selected(files_temp);//开始读取文件信号
+		emit selected(files_temp,fileNames.size());//开始读取文件信号
 	}
 
 }
 
-//读取文件
-void osgQtViewer::readFiles(QStringList files_temp)
-{
-	for (int i = 0; i < files_temp.size(); i++)
-	{
-		int index;
-		index = fileNames.size();
-		qDebug() << index;
-		readOneFile(files_temp[i], index);
-	}
-}
-
-//单个文件读取
-void osgQtViewer::readOneFile(QString filePath, int index)
-{
-	QString file_full, file_name, file_path, file_suffix;
-	QFileInfo fileinfo;
-	fileinfo = QFileInfo(filePath);
-	//文件名
-	file_name = fileinfo.fileName();
-	file_suffix = fileinfo.suffix();
-	qDebug() << fileinfo.fileName();
-
-	if (file_suffix == QString("txt"))
-	{
-		readTXT(filePath, index);
-	}
-	else if (file_suffix == QString("osg"))
-	{
-		readOSG(filePath, index);
-	}
-}
+////读取文件
+//void osgQtViewer::readFiles(QStringList files_temp)
+//{
+//	for (int i = 0; i < files_temp.size(); i++)
+//	{
+//		int index;
+//		index = fileNames.size();
+//		qDebug() << index;
+//		readOneFile(files_temp[i], index);
+//	}
+//}
+//
+////单个文件读取
+//void osgQtViewer::readOneFile(QString filePath, int index)
+//{
+//	QString file_full, file_name, file_path, file_suffix;
+//	QFileInfo fileinfo;
+//	fileinfo = QFileInfo(filePath);
+//	//文件名
+//	file_name = fileinfo.fileName();
+//	file_suffix = fileinfo.suffix();
+//	qDebug() << fileinfo.fileName();
+//
+//	if (file_suffix == QString("txt"))
+//	{
+//		readTXT(filePath, index);
+//	}
+//	else if (file_suffix == QString("osg"))
+//	{
+//		readOSG(filePath, index);
+//	}
+//}
 
 /*--------------------------------------------------------------------------------------*/
 
@@ -522,6 +560,7 @@ void osgQtViewer::openResent(QAction* act)
 {
 	qDebug() << "resentread";
 	QString filepath = act->text();
-	readOneFile(filepath,fileNames.size());
+	//readOneFile(filepath,fileNames.size());
+	emit openResent(filepath, fileNames.size());
 	
 }

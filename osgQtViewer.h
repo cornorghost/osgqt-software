@@ -4,9 +4,11 @@
 #include <QWidget>
 #include <QTreeWidgetItem>
 #include <QThread>
+#include <QMetaType>
 
 #include "QtOSGWidget.h"
 #include "osgQtType.h"
+#include "FileHandler.h"
 
 #include <map>
 #include <vector>
@@ -19,9 +21,9 @@ QT_BEGIN_NAMESPACE
 namespace Ui { class osgQtViewer; }
 QT_END_NAMESPACE
 
-extern QtOSGWidget *g_widget;
+//extern QtOSGWidget *g_widget;
 
-extern std::map<QString, PointInfos> pointsInfos;
+//extern std::map<QString, PointInfos> pointsInfos;
 
 using namespace std;
 
@@ -38,6 +40,7 @@ public:
 	void addList(QString fileName);
 
 	QtOSGWidget *g_widget;
+
 	QThread* m_objThread;
 private:
     Ui::osgQtViewer *ui;
@@ -53,9 +56,9 @@ protected:
 
 	void saveResentFiles();
 
-	void readTXT(QString filePath, int index);
+	//void readTXT(QString filePath, int index);
 
-	void readOSG(QString filePath, int index);
+	//void readOSG(QString filePath, int index);
 
 	void removeNode();
 
@@ -64,9 +67,13 @@ protected:
 private slots:
 	void selectFile();
 
-	void readFiles(QStringList files_temp);
+	//void readFiles(QStringList files_temp);
 
-	void readOneFile(QString fileName, int index);
+	//void readOneFile(QString fileName, int index);
+
+	void updateTXT(QString filePath, QString fileName, osg::ref_ptr<osg::Vec3Array> vertices, osg::ref_ptr<osg::Vec4Array> colors, PointInfos point);
+
+	void updateOSG(QString filePath, QString fileName, osg::ref_ptr<osg::Node> node, PointInfos point);
 
 	void openResent(QAction* act);
 
@@ -75,7 +82,13 @@ private slots:
 	void showIfos(QTreeWidgetItem * item, int column);
 
 signals:
-	void selected(QStringList files_temp);
+	void selected(QStringList files_temp, int currentSize);
+
+	void openResent(QString fileName, int index);
 
 };
+//Q_DECLARE_METATYPE(osg::ref_ptr<osg::Vec3Array>);
+//Q_DECLARE_METATYPE(osg::ref_ptr<osg::Vec4Array>);
+//Q_DECLARE_METATYPE(PointInfos);
+
 #endif // OSGQTVIWER_H

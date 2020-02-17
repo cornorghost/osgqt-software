@@ -71,7 +71,7 @@ void osgEventHandler::pick(osg::ref_ptr<osgViewer::Viewer> viewer, const osgGA::
 	//	}
 	//}
 
-	osg::ref_ptr<osgUtil::PolytopeIntersector> picker = new osgUtil::PolytopeIntersector(osgUtil::Intersector::WINDOW, ea.getX() - 0.5, ea.getY() - 0.5, ea.getX() + 0.5, ea.getY() + 0.5);
+	osg::ref_ptr<osgUtil::PolytopeIntersector> picker = new osgUtil::PolytopeIntersector(osgUtil::Intersector::WINDOW, ea.getX() - 1.0, ea.getY() - 1.0, ea.getX() + 1.0, ea.getY() + 1.0);
 	osgUtil::IntersectionVisitor iv(picker.get());
 	//osgViewer::View* pView = dynamic_cast<osgViewer::View*>(&us);
 	viewer->getCamera()->accept(iv);
