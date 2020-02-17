@@ -70,7 +70,8 @@ void osgEventHandler::pick(osg::ref_ptr<osgViewer::Viewer> viewer, const osgGA::
 	//		gdlist += os.str();
 	//	}
 	//}
-	osg::ref_ptr<osgUtil::PolytopeIntersector> picker = new osgUtil::PolytopeIntersector(osgUtil::Intersector::WINDOW, ea.getX() - 1.0, ea.getY() - 1.0, ea.getX() + 1.0, ea.getY() + 1.0);
+
+	osg::ref_ptr<osgUtil::PolytopeIntersector> picker = new osgUtil::PolytopeIntersector(osgUtil::Intersector::WINDOW, ea.getX() - 0.5, ea.getY() - 0.5, ea.getX() + 0.5, ea.getY() + 0.5);
 	osgUtil::IntersectionVisitor iv(picker.get());
 	//osgViewer::View* pView = dynamic_cast<osgViewer::View*>(&us);
 	viewer->getCamera()->accept(iv);
@@ -83,4 +84,15 @@ void osgEventHandler::pick(osg::ref_ptr<osgViewer::Viewer> viewer, const osgGA::
 		viewer->getSceneData()->asGroup()->addChild(sd.release());
 	}
 
+	//osg::Vec3f vec3;
+	//osg::ref_ptr<osg::Camera> camera = viewer->getCamera();
+	//osg::Vec3 vScreen(ea.getX(), ea.getY(), 0);
+	//osg::Matrix mVPW = camera->getViewMatrix() * camera->getProjectionMatrix() * camera->getViewport()->computeWindowMatrix();
+	//osg::Matrix invertVPW;
+	//invertVPW.invert(mVPW);
+	//vec3 = vScreen * invertVPW;
+	//osg::ref_ptr<osg::Sphere> sphere = new osg::Sphere(vec3, 0.007);
+	//osg::ref_ptr<osg::ShapeDrawable> sd = new osg::ShapeDrawable(sphere);
+	//sd->setColor(osg::Vec4(1.0, 0.0, 0.0, 1.0));
+	//viewer->getSceneData()->asGroup()->addChild(sd.release());
 }
