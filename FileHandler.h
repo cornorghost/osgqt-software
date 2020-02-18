@@ -14,6 +14,8 @@ class FileHandler :public QObject
 	Q_OBJECT
 	//public:
 	//	explicit FileHandler(QObject *parent = nullptr);
+	public:
+		long int getProcess();
 
 	protected:
 		void readTXT(QString filePath, int index);
@@ -29,6 +31,13 @@ class FileHandler :public QObject
 		void toUpdateTXT(QString filePath, QString fileName, osg::ref_ptr<osg::Vec3Array> vertices, osg::ref_ptr<osg::Vec4Array> colors, PointInfos point);
 
 		void toUpdateOSG(QString filePath, QString fileName, osg::ref_ptr<osg::Node> node, PointInfos point);
+
+		//void setProcess(long int value);
+
+		void beginToRead(long int size, QString fileName);
+	private:
+		long int myProcess = 0;
+
 
 };
 

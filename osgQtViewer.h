@@ -39,16 +39,20 @@ public:
 
 	void addList(QString fileName);
 
-	QtOSGWidget *g_widget;
-
-	QThread* m_objThread;
 private:
     Ui::osgQtViewer *ui;
+
 	QStringList fileNames;
 	QStringList filePathes;
 	set<QString> resentFiles;
+
 	map<QString, PointInfos> pointsInfos;
 
+	QtOSGWidget *g_widget;
+
+	FileHandler *fileHandler;
+
+	QThread* m_objThread;
 protected:
 	void initMenu();
 
@@ -80,6 +84,8 @@ private slots:
 	void checkChange(QTreeWidgetItem *item, int column);
 
 	void showIfos(QTreeWidgetItem * item, int column);
+
+	void showProcess(long int size, QString fileName);
 
 signals:
 	void selected(QStringList files_temp, int currentSize);

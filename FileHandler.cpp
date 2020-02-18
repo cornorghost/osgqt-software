@@ -6,9 +6,13 @@
 #include <QDebug>
 #include <QFileInfo>
 #include <QThread>
-#include <QProgressDialog>
 
 using namespace std;
+
+long int FileHandler::getProcess()
+{
+	return myProcess;
+}
 
 //¶Átxt
 void FileHandler::readTXT(QString filePath, int index)
@@ -71,11 +75,10 @@ void FileHandler::readTXT(QString filePath, int index)
 			pcl::PointXYZRGB t;
 			string s;
 			stringstream ss;
-			process.setLabelText(file_name);
-			process.setRange(0, fileinfo.size());
+			emit beginToRead(fileinfo.size(), file_name);
 			while (!fin.eof())
 			{
-				process.setValue(fin.tellg());
+				myProcess = fin.tellg();
 				double r, g, b;
 				getline(fin, s, '\n');
 				point_size++;

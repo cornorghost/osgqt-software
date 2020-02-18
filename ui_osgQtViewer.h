@@ -76,7 +76,8 @@ public:
         tableWidget->setMaximumSize(QSize(250, 16777215));
         tableWidget->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
         tableWidget->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
-        tableWidget->horizontalHeader()->setDefaultSectionSize(110);
+        tableWidget->horizontalHeader()->setCascadingSectionResizes(true);
+        tableWidget->horizontalHeader()->setDefaultSectionSize(125);
 
         gridLayout_2->addWidget(tableWidget, 1, 0, 1, 1);
 

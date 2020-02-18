@@ -10,6 +10,7 @@
 #include <QPushButton>
 #include <QAction>  
 #include <QLayout> 
+#include <QProgressDialog>
 
 #include <fstream>
 
@@ -88,7 +89,8 @@ void osgQtViewer::init()
 
 	g_widget->setMinimumWidth(900);
 
-	FileHandler *fileHandler = new FileHandler;
+	//设置文件读取为线程
+	fileHandler = new FileHandler;
 
 	m_objThread = new QThread();
 
@@ -106,8 +108,6 @@ void osgQtViewer::init()
 	initMenu();
 
 	//设置信息栏
-	ui->tableWidget->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
-	ui->tableWidget->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
 	ui->tableWidget->setEditTriggers(QAbstractItemView::NoEditTriggers);
 	ui->tableWidget->verticalHeader()->hide();
 
@@ -115,6 +115,7 @@ void osgQtViewer::init()
 	qRegisterMetaType<osg::ref_ptr<osg::Vec3Array>>("osg::ref_ptr<osg::Vec3Array>");
 	qRegisterMetaType<osg::ref_ptr<osg::Vec4Array>>("osg::ref_ptr<osg::Vec4Array>");
 	qRegisterMetaType<PointInfos>("PointInfos");
+	qRegisterMetaType<long int>("long int");
 	
 	//函数信号
 	connect(this, SIGNAL(selected(QStringList, int)), fileHandler, SLOT(readFiles(QStringList, int))); //读取文件
@@ -123,9 +124,13 @@ void osgQtViewer::init()
 
 	connect(fileHandler, &FileHandler::toUpdateOSG, this, &osgQtViewer::updateOSG);//更新osg
 
-	connect(ui->treeWidget, SIGNAL(itemChanged(QTreeWidgetItem *,int)), this, SLOT(checkChange(QTreeWidgetItem *, int)));
+	connect(ui->treeWidget, SIGNAL(itemChanged(QTreeWidgetItem *,int)), this, SLOT(checkChange(QTreeWidgetItem *, int)));//显示与隐藏节点
 
-	connect(ui->treeWidget, SIGNAL(itemClicked(QTreeWidgetItem *, int)), this, SLOT(showIfos(QTreeWidgetItem *, int)));
+	connect(ui->treeWidget, SIGNAL(itemClicked(QTreeWidgetItem *, int)), this, SLOT(showIfos(QTreeWidgetItem *, int)));//显示信息
+
+	connect(fileHandler, SIGNAL(beginToRead(long int, QString)), this, SLOT(showProcess(long int, QString)));//显示进度条
+
+	connect(fileHandler, SIGNAL(setProcess(long int)), this, SLOT(getProcess(long int)));
 
 }
 
@@ -337,31 +342,6 @@ void osgQtViewer::saveResentFiles()
 //	g_widget->addNode(node, file_name);
 //}
 
-//读取txt
-void osgQtViewer::updateTXT(QString filePath, QString fileName, osg::ref_ptr<osg::Vec3Array> vertices, osg::ref_ptr<osg::Vec4Array> colors, PointInfos point)
-{
-	qDebug() << "txt";
-	pointsInfos[fileName] = point;
-	addList(fileName);
-	fileNames.push_back(fileName);
-	filePathes.push_back(filePath);
-	resentFiles.insert(filePath);
-	g_widget->addNode(vertices, colors, fileName);
-}
-
-//读取osg
-void osgQtViewer::updateOSG(QString filePath, QString fileName, osg::ref_ptr<osg::Node> node, PointInfos point)
-{
-	qDebug() << "osg";
-	addList(fileName);
-
-	fileNames.push_back(fileName);
-	filePathes.push_back(filePath);
-	resentFiles.insert(filePath);
-
-	g_widget->addNode(node, fileName);
-}
-
 //选择文件
 void osgQtViewer::selectFile()
 {
@@ -445,6 +425,59 @@ void osgQtViewer::selectFile()
 //}
 
 /*--------------------------------------------------------------------------------------*/
+//添加显示进度条
+void osgQtViewer::showProcess(long int size, QString fileName)
+{
+	qDebug() << "in process";
+	qDebug() << size;
+	QProgressDialog *progressDlg = new QProgressDialog(this);
+	progressDlg->blockSignals(false);
+	progressDlg->setWindowModality(Qt::WindowModal);
+	progressDlg->setMinimumDuration(0);//dialog出现需等待的时间
+	progressDlg->setWindowTitle("Please Wait...");
+	progressDlg->setLabelText(fileName);
+	progressDlg->setCancelButtonText("Cancel");
+	progressDlg->setRange(0, size);
+
+	long int temp=-1;
+	for (int i = 0; i <= size; i += 1)
+	{
+		long int process = fileHandler->getProcess();
+		//qDebug() << i;
+		if (progressDlg->wasCanceled() || process>size-10) break;
+		//qDebug() << fileHandler->getProcess();
+		progressDlg->setValue(process);
+		temp = process;
+	}
+	progressDlg->setValue(size);
+	qDebug() << "out process";
+}
+
+
+//读取txt
+void osgQtViewer::updateTXT(QString filePath, QString fileName, osg::ref_ptr<osg::Vec3Array> vertices, osg::ref_ptr<osg::Vec4Array> colors, PointInfos point)
+{
+	qDebug() << "txt";
+	pointsInfos[fileName] = point;
+	addList(fileName);
+	fileNames.push_back(fileName);
+	filePathes.push_back(filePath);
+	resentFiles.insert(filePath);
+	g_widget->addNode(vertices, colors, fileName);
+}
+
+//读取osg
+void osgQtViewer::updateOSG(QString filePath, QString fileName, osg::ref_ptr<osg::Node> node, PointInfos point)
+{
+	qDebug() << "osg";
+	addList(fileName);
+
+	fileNames.push_back(fileName);
+	filePathes.push_back(filePath);
+	resentFiles.insert(filePath);
+
+	g_widget->addNode(node, fileName);
+}
 
 //显示栏选中状态动作
 void osgQtViewer::checkChange(QTreeWidgetItem *item, int column)
@@ -491,6 +524,11 @@ void osgQtViewer::removeNode()
 			fileNames.removeAt(index);
 			filePathes.removeAt(index);
 			ui->tableWidget->clearContents();
+			//清理显示栏
+			ui->tableWidget->setRowCount(0);
+			ui->tableWidget->setColumnCount(2);
+			ui->tableWidget->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+
 			g_widget->deleteNode(index);
 		}
 		else //parent才是
@@ -548,10 +586,14 @@ void osgQtViewer::showIfos(QTreeWidgetItem * item, int column)
 		ui->tableWidget->setItem(5, 0, new QTableWidgetItem("center"));
 		ui->tableWidget->setItem(5, 1, new QTableWidgetItem("center_x:" + QString::number(infos.center_x) + "\n"
 			+ "center_y:" + QString::number(infos.center_y) + "\n" 
-			+ "center_z:" + QString::number(infos.center_z) + "\n"));
+			+ "center_z:" + QString::number(infos.center_z)));
 
 		ui->tableWidget->setItem(6, 0, new QTableWidgetItem("index"));
 		ui->tableWidget->setItem(6, 1, new QTableWidgetItem(QString::number(infos.index)));
+
+		ui->tableWidget->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+		ui->tableWidget->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+		ui->tableWidget->horizontalHeader()->setMinimumSectionSize(125);
 	}
 }
 

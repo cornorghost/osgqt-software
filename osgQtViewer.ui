@@ -106,8 +106,11 @@
      <property name="horizontalScrollMode">
       <enum>QAbstractItemView::ScrollPerPixel</enum>
      </property>
+     <attribute name="horizontalHeaderCascadingSectionResizes">
+      <bool>true</bool>
+     </attribute>
      <attribute name="horizontalHeaderDefaultSectionSize">
-      <number>110</number>
+      <number>125</number>
      </attribute>
      <column>
       <property name="text">
