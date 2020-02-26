@@ -1,5 +1,6 @@
 #include "QtOSGWidget.h"
 #include "osgQtViewer.h"
+#include "windows.h"
 #include <QDebug>
 #include <QThread>
 
@@ -102,17 +103,47 @@ void QtOSGWidget::addNode(osg::ref_ptr<osg::Vec3Array> vertices, osg::ref_ptr<os
 	QByteArray cpath = file_name.toLocal8Bit();
 	char *flag = cpath.data();
 	geode->setName(flag);
+	string flag_box = "box_";
+	flag_box += flag;
+
 	//osg::ref_ptr<osg::Node> node= dynamic_cast<osg::Node*>(geode.get());
 
+	//读取包围盒dll
+	HINSTANCE hInst;
+	hInst = LoadLibrary(L"obbbox.dll");
+	typedef osg::ref_ptr<osg::Geode>(*GETBOX)(osg::ref_ptr<osg::Node> node);
+	GETBOX getBox = (GETBOX)GetProcAddress(hInst, "getBox");
+	if (!getBox)
+	{
+		std::cout << "failed";
+		return;
+	}
 	if (first)
 	{
-		m_viewer->setSceneData(geode);
+		osg::ref_ptr<osg::Group> root = new osg::Group;
+		root->addChild(geode);
+		osg::ref_ptr<osg::Node> box = getBox(geode);
+		box->setNodeMask(0);
+		box->setName(flag_box);
+		root->addChild(box);
+		m_viewer->setSceneData(root);
+
 		setDefaultState();
 		qDebug() << "first added";
 	}
 	else
 	{
-		m_viewer->getSceneData()->asGroup()->addChild(geode);
+		osg::ref_ptr<osg::Group> m_group = m_viewer->getSceneData()->asGroup();
+
+		geode->setName(flag);
+
+		m_group->addChild(geode);
+
+		osg::ref_ptr<osg::Node> box = getBox(geode);
+		box->setName(flag_box);
+		box->setNodeMask(0);
+		m_group->addChild(box);
+
 		setDefaultState();
 		qDebug() << "added";
 	}
@@ -124,9 +155,19 @@ void QtOSGWidget::addNode(osg::ref_ptr<osg::Node> node, QString file_name)
 	//qDebug() << QString::number((unsigned int)QThread::currentThreadId());
 	QByteArray cpath = file_name.toLocal8Bit();
 	char *flag = cpath.data();
-
+	string flag_box = "box_";
+	flag_box += flag;
+	//读取包围盒dll
+	HINSTANCE hInst;
+	hInst = LoadLibrary(L"obbbox.dll");
+	typedef osg::ref_ptr<osg::Geode>(*GETBOX)(osg::ref_ptr<osg::Node> node);
+	GETBOX getBox = (GETBOX)GetProcAddress(hInst, "getBox");
+	if (!getBox)
+	{
+		std::cout << "failed";
+		return;
+	}
 	if (m_viewer->getSceneData()) { //屏幕有数据
-		setDefaultState();
 
 		osg::ref_ptr<osg::Group> m_group = m_viewer->getSceneData()->asGroup();
 
@@ -134,12 +175,23 @@ void QtOSGWidget::addNode(osg::ref_ptr<osg::Node> node, QString file_name)
 
 		m_group->addChild(node);
 
+		osg::ref_ptr<osg::Node> box = getBox(node);
+		box->setNodeMask(0);
+		box->setName(flag_box);
+		m_group->addChild(box);
+
 		setDefaultState();
 	}
 
 	else
 	{
-		m_viewer->setSceneData(node);
+		osg::ref_ptr<osg::Group> root = new osg::Group;
+		root->addChild(node);
+		osg::ref_ptr<osg::Node> box = getBox(node);
+		box->setNodeMask(0);
+		box->setName(flag_box);
+		root->addChild(box);
+		m_viewer->setSceneData(root);
 
 		setDefaultState();
 	}

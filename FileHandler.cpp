@@ -68,18 +68,18 @@ void FileHandler::readTXT(QString filePath, int index)
 		if (point.structureSize == 6)
 		{
 			point.structure = QString("xyzrgb");
-			double max_x = DBL_MIN, min_x = DBL_MAX, max_y = DBL_MIN, min_y = DBL_MAX, max_z = DBL_MIN, min_z = DBL_MAX;
+			//double max_x = DBL_MIN, min_x = DBL_MAX, max_y = DBL_MIN, min_y = DBL_MAX, max_z = DBL_MIN, min_z = DBL_MAX;
 			osg::ref_ptr<osg::Vec3Array> vertices = new osg::Vec3Array;
 			osg::ref_ptr<osg::Vec4Array> colors = new osg::Vec4Array;
 			pcl::PointCloud<pcl::PointXYZRGB>::Ptr p(new pcl::PointCloud<pcl::PointXYZRGB>);
 			pcl::PointXYZRGB t;
-			string s;
 			stringstream ss;
 			emit beginToRead(fileinfo.size(), file_name);
 			while (!fin.eof())
 			{
+				string s;
 				myProcess = fin.tellg();
-				double r, g, b;
+				int r, g, b;
 				getline(fin, s, '\n');
 				point_size++;
 				ss << s;
@@ -92,23 +92,21 @@ void FileHandler::readTXT(QString filePath, int index)
 				frgb = (int)r << 16 | (int)g << 8 | (int)b;
 				t.rgb = *reinterpret_cast<float*>(&frgb);
 				p->push_back(t);
-				s.clear();
 				ss.clear();
-				//计算包围盒
-				min_x = min_x < t.x ? min_x : t.x;
-				max_x = max_x > t.x ? max_x : t.x;
-				min_y = min_y < t.y ? min_y : t.y;
-				max_y = max_y > t.y ? max_y : t.y;
-				min_z = min_z < t.z ? min_z : t.z;
-				max_z = max_z > t.z ? max_z : t.z;
+				////计算包围盒
+				//min_x = min_x < t.x ? min_x : t.x;
+				//max_x = max_x > t.x ? max_x : t.x;
+				//min_y = min_y < t.y ? min_y : t.y;
+				//max_y = max_y > t.y ? max_y : t.y;
+				//min_z = min_z < t.z ? min_z : t.z;
+				//max_z = max_z > t.z ? max_z : t.z;
 			}
-			ss.clear();
 			fin.close();
 			qDebug() << "ok";
 
-			point.max_x = max_x; point.max_y = max_y; point.max_z = max_z;
-			point.min_x = min_x; point.min_y = min_y; point.min_z = min_z;
-			point.center_x = (max_x + min_x) / 2; point.center_y = (max_y + min_y) / 2; point.center_z = (max_z + min_z) / 2;
+			//point.max_x = max_x; point.max_y = max_y; point.max_z = max_z;
+			//point.min_x = min_x; point.min_y = min_y; point.min_z = min_z;
+			//point.center_x = (max_x + min_x) / 2; point.center_y = (max_y + min_y) / 2; point.center_z = (max_z + min_z) / 2;
 			point.pointSize = point_size;
 			point.point = p;
 
@@ -133,17 +131,24 @@ void FileHandler::readOSG(QString filePath, int index)
 	fileinfo = QFileInfo(filePath);
 	file_name = fileinfo.fileName();//文件名
 	file_path = fileinfo.absolutePath();//文件路径
+	emit beginToRead(10, file_name);
 
 	PointInfos point;//存储信息
 
 	point.fileName = file_name;
 	point.index = index;
 
+	myProcess = 1;
+
 	QByteArray cpath = filePath.toLocal8Bit();
 	char *filename = cpath.data();
 
+	myProcess = 4;
+
 	osg::ref_ptr<osg::Node> node = osgDB::readNodeFile(filename);
 
+
+	myProcess = 9;
 	//addList(file_name);
 
 	//fileNames.push_back(file_name);
@@ -151,7 +156,7 @@ void FileHandler::readOSG(QString filePath, int index)
 	//resentFiles.insert(filePath);
 
 	//g_widget->addNode(node, file_name);
-	toUpdateOSG(filePath, file_name, node, point);
+	emit toUpdateOSG(filePath, file_name, node, point);
 }
 
 //读取文件

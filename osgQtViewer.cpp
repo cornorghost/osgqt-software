@@ -114,11 +114,14 @@ void osgQtViewer::init()
 
 	qRegisterMetaType<osg::ref_ptr<osg::Vec3Array>>("osg::ref_ptr<osg::Vec3Array>");
 	qRegisterMetaType<osg::ref_ptr<osg::Vec4Array>>("osg::ref_ptr<osg::Vec4Array>");
+	qRegisterMetaType<osg::ref_ptr<osg::Node>>("osg::ref_ptr<osg::Node>");
 	qRegisterMetaType<PointInfos>("PointInfos");
 	qRegisterMetaType<long int>("long int");
 	
 	//函数信号
 	connect(this, SIGNAL(selected(QStringList, int)), fileHandler, SLOT(readFiles(QStringList, int))); //读取文件
+
+	connect(this, SIGNAL(openResent(QStringList, int)), fileHandler, SLOT(readFiles(QStringList, int))); //读取最近文件
 
 	connect(fileHandler, &FileHandler::toUpdateTXT, this, &osgQtViewer::updateTXT);//更新txt
 
@@ -129,8 +132,6 @@ void osgQtViewer::init()
 	connect(ui->treeWidget, SIGNAL(itemClicked(QTreeWidgetItem *, int)), this, SLOT(showIfos(QTreeWidgetItem *, int)));//显示信息
 
 	connect(fileHandler, SIGNAL(beginToRead(long int, QString)), this, SLOT(showProcess(long int, QString)));//显示进度条
-
-	connect(fileHandler, SIGNAL(setProcess(long int)), this, SLOT(getProcess(long int)));
 
 }
 
@@ -439,15 +440,13 @@ void osgQtViewer::showProcess(long int size, QString fileName)
 	progressDlg->setCancelButtonText("Cancel");
 	progressDlg->setRange(0, size);
 
-	long int temp=-1;
-	for (int i = 0; i <= size; i += 1)
+	for (int i = 0; i <= 1000; i += 1)
 	{
 		long int process = fileHandler->getProcess();
 		//qDebug() << i;
 		if (progressDlg->wasCanceled() || process>size-10) break;
 		//qDebug() << fileHandler->getProcess();
 		progressDlg->setValue(process);
-		temp = process;
 	}
 	progressDlg->setValue(size);
 	qDebug() << "out process";
@@ -469,7 +468,7 @@ void osgQtViewer::updateTXT(QString filePath, QString fileName, osg::ref_ptr<osg
 //读取osg
 void osgQtViewer::updateOSG(QString filePath, QString fileName, osg::ref_ptr<osg::Node> node, PointInfos point)
 {
-	qDebug() << "osg";
+	qDebug() << "updatosg";
 	addList(fileName);
 
 	fileNames.push_back(fileName);
@@ -486,12 +485,14 @@ void osgQtViewer::checkChange(QTreeWidgetItem *item, int column)
 	if (Qt::Checked == item->checkState(column))
 	{
 		//qDebug() << ui->treeWidget->indexOfTopLevelItem(item);
-		g_widget->setVisible(ui->treeWidget->indexOfTopLevelItem(item));
+		g_widget->setVisible(ui->treeWidget->indexOfTopLevelItem(item) * 2);
+		g_widget->setVisible(ui->treeWidget->indexOfTopLevelItem(item) * 2+1);
 	}
 	else
 	{
 		//qDebug() << ui->treeWidget->indexOfTopLevelItem(item);
-		g_widget->setUnvisible(ui->treeWidget->indexOfTopLevelItem(item));
+		g_widget->setUnvisible(ui->treeWidget->indexOfTopLevelItem(item) * 2);
+		g_widget->setUnvisible(ui->treeWidget->indexOfTopLevelItem(item) * 2+1);
 	}
 }
 
@@ -529,14 +530,16 @@ void osgQtViewer::removeNode()
 			ui->tableWidget->setColumnCount(2);
 			ui->tableWidget->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
 
-			g_widget->deleteNode(index);
+			g_widget->deleteNode(index * 2);
+			g_widget->deleteNode(index * 2+1);
 		}
 		else //parent才是
 		{
 			int index;
 			index = parent->indexOfChild(item);
 			parent->removeChild(item);
-			g_widget->deleteNode(index);
+			g_widget->deleteNode(index * 2);
+			g_widget->deleteNode(index * 2+1);
 		}
 	}
 	
@@ -551,9 +554,10 @@ void osgQtViewer::keyPressEvent(QKeyEvent *event)
 }
 
 
-//显示信息栏
+//显示信息栏同时高亮包围盒
 void osgQtViewer::showIfos(QTreeWidgetItem * item, int column)
 {
+	qDebug() << item->isSelected();
 	QString name = item->text(0);
 	QString suffix = QFileInfo(name).suffix();
 	PointInfos infos = pointsInfos[name];
@@ -595,9 +599,11 @@ void osgQtViewer::showIfos(QTreeWidgetItem * item, int column)
 		ui->tableWidget->verticalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
 		ui->tableWidget->horizontalHeader()->setMinimumSectionSize(125);
 	}
+	//高亮包围盒
+	if(item->checkState(column)==Qt::Checked) g_widget->setVisible(ui->treeWidget->indexOfTopLevelItem(item)*2+1);
 }
 
-//最近文件选取读取
+//最近文件选取读取,打开
 void osgQtViewer::openResent(QAction* act)
 {
 	qDebug() << "resentread";
