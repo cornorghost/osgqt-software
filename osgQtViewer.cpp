@@ -116,12 +116,12 @@ void osgQtViewer::init()
 	qRegisterMetaType<osg::ref_ptr<osg::Vec4Array>>("osg::ref_ptr<osg::Vec4Array>");
 	qRegisterMetaType<osg::ref_ptr<osg::Node>>("osg::ref_ptr<osg::Node>");
 	qRegisterMetaType<PointInfos>("PointInfos");
-	qRegisterMetaType<long int>("long int");
+	qRegisterMetaType<int64_t>("int64_t");
 	
 	//函数信号
 	connect(this, SIGNAL(selected(QStringList, int)), fileHandler, SLOT(readFiles(QStringList, int))); //读取文件
 
-	connect(this, SIGNAL(openResent(QStringList, int)), fileHandler, SLOT(readFiles(QStringList, int))); //读取最近文件
+	connect(this, SIGNAL(openResent(QString, int)), fileHandler, SLOT(readOneFile(QString, int))); //读取最近文件
 
 	connect(fileHandler, &FileHandler::toUpdateTXT, this, &osgQtViewer::updateTXT);//更新txt
 
@@ -131,7 +131,7 @@ void osgQtViewer::init()
 
 	connect(ui->treeWidget, SIGNAL(itemClicked(QTreeWidgetItem *, int)), this, SLOT(showIfos(QTreeWidgetItem *, int)));//显示信息
 
-	connect(fileHandler, SIGNAL(beginToRead(long int, QString)), this, SLOT(showProcess(long int, QString)));//显示进度条
+	connect(fileHandler, SIGNAL(beginToRead(int64_t, QString)), this, SLOT(showProcess(int64_t, QString)));//显示进度条
 
 }
 
@@ -198,8 +198,10 @@ void osgQtViewer::saveResentFiles()
 	QTextStream out(&f);
 	out.seek(f.size());
 	set<QString>::iterator it; //定义前向迭代器
-	for (it = resentFiles.begin(); it != resentFiles.end(); it++)
+	int size = 0;
+	for (it = resentFiles.end(); it != resentFiles.begin(); it--)
 	{
+		if (++size > 5) break;
 		qDebug() << *it;
 		out << *it<<"\n";
 	}
@@ -427,7 +429,7 @@ void osgQtViewer::selectFile()
 
 /*--------------------------------------------------------------------------------------*/
 //添加显示进度条
-void osgQtViewer::showProcess(long int size, QString fileName)
+void osgQtViewer::showProcess(int64_t size, QString fileName)
 {
 	qDebug() << "in process";
 	qDebug() << size;
@@ -440,14 +442,16 @@ void osgQtViewer::showProcess(long int size, QString fileName)
 	progressDlg->setCancelButtonText("Cancel");
 	progressDlg->setRange(0, size);
 
-	for (int i = 0; i <= 1000; i += 1)
-	{
-		long int process = fileHandler->getProcess();
+	int64_t process = fileHandler->getProcess();
+	do {
+		process = fileHandler->getProcess();
 		//qDebug() << i;
-		if (progressDlg->wasCanceled() || process>size-10) break;
+		if (progressDlg->wasCanceled() || process > size - 3) break;
 		//qDebug() << fileHandler->getProcess();
 		progressDlg->setValue(process);
-	}
+	} while (process <= size);
+
+	qDebug() << process << " " << size;
 	progressDlg->setValue(size);
 	qDebug() << "out process";
 }

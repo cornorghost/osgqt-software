@@ -10,7 +10,7 @@ typedef struct PointInfos
 	QString structure;
 	int structureSize;
 	int pointSize;
-	long int fileSize;
+	int64_t fileSize;
 	float max_x;
 	float max_y;
 	float max_z;

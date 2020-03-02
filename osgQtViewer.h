@@ -85,7 +85,7 @@ private slots:
 
 	void showIfos(QTreeWidgetItem * item, int column);
 
-	void showProcess(long int size, QString fileName);
+	void showProcess(int64_t size, QString fileName);
 
 signals:
 	void selected(QStringList files_temp, int currentSize);

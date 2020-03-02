@@ -2,6 +2,7 @@
 
 #include <fstream>
 #include <string>
+#include <boost/algorithm/string/split.hpp>
 
 #include <QDebug>
 #include <QFileInfo>
@@ -9,7 +10,7 @@
 
 using namespace std;
 
-long int FileHandler::getProcess()
+int64_t FileHandler::getProcess()
 {
 	return myProcess;
 }
@@ -24,8 +25,9 @@ void FileHandler::readTXT(QString filePath, int index)
 	char *name = cpath.data();
 	qDebug() << filePath;
 
-	ifstream fin(name, ios::binary);
-	if (!fin)
+	//ifstream fin(name, ios::binary);
+	FILE *fp;
+	if (fopen_s(&fp, name, "rb") != 0)
 	{
 		qDebug() << "DataFile does not exist!!!";
 	}
@@ -37,32 +39,43 @@ void FileHandler::readTXT(QString filePath, int index)
 		//point.fileSize = fin.tellg();
 		//fin.clear();//重置
 		//fin.seekg(std::ios::beg);//重置为开头
-
+		rewind(fp);
 		int point_size = 0;
 		QString file_full, file_name, file_path, file_suffix;
 		QFileInfo fileinfo;
 		fileinfo = QFileInfo(filePath);
 		file_name = fileinfo.fileName();//文件名
 		file_path = fileinfo.absolutePath();
-		point.fileSize = fileinfo.size();
+		_fseeki64(fp,0,SEEK_END);
+		int64_t size = _ftelli64(fp);
+		point.fileSize = size;
+		_fseeki64(fp, 0, SEEK_SET);
 
 		//读取点云结构
+		//int col_temp = 0;
+		//char a[512];
+		//string sa;
+		//fin.getline(a, 512, '\n');
+		//stringstream ssa;
+		//ssa << a;
+		//while (ssa >> sa)
+		//{
+		//	col_temp++;
+		//}
 		int col_temp = 0;
-		char a[512];
-		string sa;
-		fin.getline(a, 512, '\n');
-		stringstream ssa;
-		ssa << a;
-		while (ssa >> sa)
-		{
-			col_temp++;
-		}
+		char s[200];
+		fgets(s,200,fp);
+		vector<string> ssplit;
+		boost::split(ssplit,s,boost::is_any_of(" "),boost::token_compress_on);
+		col_temp = ssplit.size();
+		_fseeki64(fp,0, SEEK_SET);
+
 		point.structureSize = col_temp;
 		point.fileName = file_name;
 		point.index = index;
 
-		fin.clear();//重置
-		fin.seekg(std::ios::beg);//重置为开头
+		//fin.clear();//重置
+		//fin.seekg(std::ios::beg);//重置为开头
 
 		qDebug() << point.structureSize;
 		if (point.structureSize == 6)
@@ -73,26 +86,30 @@ void FileHandler::readTXT(QString filePath, int index)
 			osg::ref_ptr<osg::Vec4Array> colors = new osg::Vec4Array;
 			pcl::PointCloud<pcl::PointXYZRGB>::Ptr p(new pcl::PointCloud<pcl::PointXYZRGB>);
 			pcl::PointXYZRGB t;
-			stringstream ss;
-			emit beginToRead(fileinfo.size(), file_name);
-			while (!fin.eof())
+			//stringstream ss;
+			emit beginToRead(point.fileSize, file_name);
+			int r = 0, g = 0, b = 0;
+			float x = 0.0, y = 0.0, z = 0.0;
+			while (fscanf_s(fp,"%f%f%f%d%d%d",&x,&y,&z,&r,&g,&b)!=NULL && !feof(fp))
 			{
-				string s;
-				myProcess = fin.tellg();
-				int r, g, b;
-				getline(fin, s, '\n');
-				point_size++;
-				ss << s;
-				ss >> t.x >> t.y >> t.z >> r >> g >> b;
-				vertices->push_back(osg::Vec3f(t.x, t.y, t.z));
-				colors->push_back(osg::Vec4f(r / 255.0, g / 255.0, b / 255.0, 1.0));
-				if (fin.tellg() % 200000 == 0)
+				//string s;
+				//myProcess = fin.tellg();
+				//int r, g, b;
+				//getline(fin, s, '\n');
+				//point_size++;
+				//ss << s;
+				//ss >> t.x >> t.y >> t.z >> r >> g >> b;
+				t.x = x; t.y = y; t.z = z;
+				//qDebug() << x << y << z << r << g << b;
+				if (myProcess % 20000 == 0)
 					qDebug() << t.x << t.y << t.z << r << g << b;
+				myProcess = ftell(fp);
 				int32_t frgb = 0;
 				frgb = (int)r << 16 | (int)g << 8 | (int)b;
 				t.rgb = *reinterpret_cast<float*>(&frgb);
 				p->push_back(t);
-				ss.clear();
+				//ss.clear();
+				//ss.str("");
 				////计算包围盒
 				//min_x = min_x < t.x ? min_x : t.x;
 				//max_x = max_x > t.x ? max_x : t.x;
@@ -101,7 +118,12 @@ void FileHandler::readTXT(QString filePath, int index)
 				//min_z = min_z < t.z ? min_z : t.z;
 				//max_z = max_z > t.z ? max_z : t.z;
 			}
-			fin.close();
+			//fin.close();
+			fclose(fp);
+			for (int64_t i = 0; i < p->size(); i++) {
+				vertices->push_back(osg::Vec3f(p->points[i].x, p->points[i].y, p->points[i].z));
+				colors->push_back(osg::Vec4f(p->points[i].r / 255.0, p->points[i].r / 255.0, p->points[i].r / 255.0, 1.0));
+			}
 			qDebug() << "ok";
 
 			//point.max_x = max_x; point.max_y = max_y; point.max_z = max_z;

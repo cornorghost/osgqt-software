@@ -15,7 +15,7 @@ class FileHandler :public QObject
 	//public:
 	//	explicit FileHandler(QObject *parent = nullptr);
 	public:
-		long int getProcess();
+		int64_t getProcess();
 
 	protected:
 		void readTXT(QString filePath, int index);
@@ -34,9 +34,9 @@ class FileHandler :public QObject
 
 		//void setProcess(long int value);
 
-		void beginToRead(long int size, QString fileName);
+		void beginToRead(int64_t size, QString fileName);
 	private:
-		long int myProcess = 0;
+		int64_t myProcess = 0;
 
 
 };
