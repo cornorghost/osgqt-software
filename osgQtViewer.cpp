@@ -197,9 +197,9 @@ void osgQtViewer::saveResentFiles()
 	}
 	QTextStream out(&f);
 	out.seek(f.size());
-	set<QString>::iterator it; //定义前向迭代器
+	set<QString>::iterator  it; //定义前向迭代器
 	int size = 0;
-	for (it = resentFiles.end(); it != resentFiles.begin(); it--)
+	for (it = resentFiles.begin(); it != resentFiles.end(); it++)
 	{
 		if (++size > 5) break;
 		qDebug() << *it;
@@ -446,7 +446,11 @@ void osgQtViewer::showProcess(int64_t size, QString fileName)
 	do {
 		process = fileHandler->getProcess();
 		//qDebug() << i;
-		if (progressDlg->wasCanceled() || process > size - 3) break;
+		if (progressDlg->wasCanceled() || process > size - 3)
+		{
+			qDebug() << process << endl;
+			break;
+		}
 		//qDebug() << fileHandler->getProcess();
 		progressDlg->setValue(process);
 	} while (process <= size);

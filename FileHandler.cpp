@@ -90,8 +90,10 @@ void FileHandler::readTXT(QString filePath, int index)
 			emit beginToRead(point.fileSize, file_name);
 			int r = 0, g = 0, b = 0;
 			float x = 0.0, y = 0.0, z = 0.0;
-			while (fscanf_s(fp,"%f%f%f%d%d%d",&x,&y,&z,&r,&g,&b)!=NULL && !feof(fp))
+			char xs[100], ys[100], zs[100], rs[100], gs[100], bs[100];
+			while (fscanf(fp,"%s %s %s %s %s %s\n", xs,ys,zs,rs,gs,bs)==6 &&!feof(fp))
 			{
+				//qDebug() << stod(xs) << endl << ys << endl << zs << endl << rs << endl;
 				//string s;
 				//myProcess = fin.tellg();
 				//int r, g, b;
@@ -99,11 +101,14 @@ void FileHandler::readTXT(QString filePath, int index)
 				//point_size++;
 				//ss << s;
 				//ss >> t.x >> t.y >> t.z >> r >> g >> b;
-				t.x = x; t.y = y; t.z = z;
+				t.x = stof(xs); t.y = stof(ys); t.z = stof(zs);
+				r = stoi(rs); g = stoi(gs); b = stoi(bs);
 				//qDebug() << x << y << z << r << g << b;
 				if (myProcess % 20000 == 0)
 					qDebug() << t.x << t.y << t.z << r << g << b;
-				myProcess = ftell(fp);
+				myProcess = _ftelli64(fp);
+				if (myProcess > size - 100)
+				qDebug() << myProcess << endl;
 				int32_t frgb = 0;
 				frgb = (int)r << 16 | (int)g << 8 | (int)b;
 				t.rgb = *reinterpret_cast<float*>(&frgb);
@@ -120,6 +125,7 @@ void FileHandler::readTXT(QString filePath, int index)
 			}
 			//fin.close();
 			fclose(fp);
+			myProcess = size;//针对某些文件读不到末尾
 			for (int64_t i = 0; i < p->size(); i++) {
 				vertices->push_back(osg::Vec3f(p->points[i].x, p->points[i].y, p->points[i].z));
 				colors->push_back(osg::Vec4f(p->points[i].r / 255.0, p->points[i].r / 255.0, p->points[i].r / 255.0, 1.0));
