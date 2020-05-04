@@ -7,6 +7,7 @@
 #include <QDebug>
 #include <QFileInfo>
 #include <QThread>
+#include <QProgressDialog>
 
 using namespace std;
 

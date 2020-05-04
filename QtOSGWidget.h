@@ -22,7 +22,10 @@
 #include <osgUtil/Optimizer>
 #include <osg/Point>
 
+#include <thread>
+
 #include "osgEventHandler.h"
+
 
 class QtOSGWidget :public QOpenGLWidget, public osgGA::GUIEventHandler
 {
@@ -39,7 +42,11 @@ public:
 
 	void addNode(osg::ref_ptr<osg::Vec3Array> vertices, osg::ref_ptr<osg::Vec4Array> colors, QString file_name);
 
+	//std::thread addNodeThread(osg::ref_ptr<osg::Vec3Array> vertices, osg::ref_ptr<osg::Vec4Array> colors, QString file_name);
+
 	void addNode(osg::ref_ptr<osg::Node> node, QString file_name);
+
+	//std::thread addNodeThread(osg::ref_ptr<osg::Node> node, QString file_name);
 
 	void setVisible(int index);
 

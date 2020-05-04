@@ -5,6 +5,7 @@
 #include <QTreeWidgetItem>
 #include <QThread>
 #include <QMetaType>
+#include <QMutex> 
 
 #include "QtOSGWidget.h"
 #include "osgQtType.h"
@@ -42,6 +43,8 @@ public:
 private:
     Ui::osgQtViewer *ui;
 
+	QMutex mutex;
+
 	QStringList fileNames;
 	QStringList filePathes;
 	set<QString> resentFiles;
@@ -52,7 +55,6 @@ private:
 
 	FileHandler *fileHandler;
 
-	QThread* m_objThread;
 protected:
 	void initMenu();
 

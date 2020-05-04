@@ -130,6 +130,8 @@
 //};
 
 int main(int argc, char **argv) {
+	qDebug() << "in main" << endl << QString::number((unsigned int)QThread::currentThreadId()) << endl;
+
 	QApplication qapp(argc, argv);
 	osgQtViewer w;
 	w.init();

@@ -1,8 +1,12 @@
 #include "QtOSGWidget.h"
-#include "osgQtViewer.h"
+//#include "osgQtViewer.h"
 #include "windows.h"
 #include <QDebug>
 #include <QThread>
+
+#include <thread>
+
+using namespace std;
 
 QtOSGWidget::QtOSGWidget(QWidget *parent)
 	: QOpenGLWidget(parent)
@@ -32,6 +36,8 @@ QtOSGWidget::QtOSGWidget(QWidget *parent)
 	m_viewer->realize();
 
 	setFocusPolicy(Qt::ClickFocus);
+	qDebug() << "in widget" << endl << QString::number((unsigned int)QThread::currentThreadId()) << endl;
+
 }
 
 //添加牛模型
@@ -69,6 +75,12 @@ void QtOSGWidget::setDefaultState()
 //添加geode节点
 void QtOSGWidget::addNode(osg::ref_ptr<osg::Vec3Array> vertices, osg::ref_ptr<osg::Vec4Array> colors, QString file_name)
 {
+	qDebug() << "in add" << endl << QString::number((unsigned int)QThread::currentThreadId()) << endl;
+	ostringstream oss;
+	oss << this_thread::get_id();
+	string stid = oss.str();
+	unsigned long long tid = std::stoull(stid);
+	qDebug() << "in add" << endl <<stid.c_str() << endl;
 	bool first=false;
 	//属性设置
 	if (!m_viewer->getSceneData())
@@ -149,9 +161,12 @@ void QtOSGWidget::addNode(osg::ref_ptr<osg::Vec3Array> vertices, osg::ref_ptr<os
 	}
 }
 
+
 //添加node节点
 void QtOSGWidget::addNode(osg::ref_ptr<osg::Node> node, QString file_name)
 {
+	qDebug() << "in widget" << endl << QString::number((unsigned int)QThread::currentThreadId()) << endl;
+
 	//qDebug() << QString::number((unsigned int)QThread::currentThreadId());
 	QByteArray cpath = file_name.toLocal8Bit();
 	char *flag = cpath.data();

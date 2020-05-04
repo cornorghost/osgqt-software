@@ -13,6 +13,8 @@
 #include <QProgressDialog>
 
 #include <fstream>
+#include <thread>
+#include <functional>
 
 #include <pcl/common/common.h>
 
@@ -27,8 +29,8 @@ osgQtViewer::osgQtViewer(QWidget *parent)
 
 osgQtViewer::~osgQtViewer()
 {
+	delete ui;
 	saveResentFiles();
-    delete ui;
 }
 
 //初始化菜单栏
@@ -92,11 +94,11 @@ void osgQtViewer::init()
 	//设置文件读取为线程
 	fileHandler = new FileHandler;
 
-	m_objThread = new QThread();
+	QThread* fileThread = new QThread();
 
-	fileHandler->moveToThread(m_objThread);
+	fileHandler->moveToThread(fileThread);
 
-	m_objThread->start();
+	fileThread->start();
 
 	//初始化显示栏treewidget
 	ui->treeWidget->setEditTriggers(QAbstractItemView::NoEditTriggers);//只读不可编辑
@@ -431,13 +433,15 @@ void osgQtViewer::selectFile()
 //添加显示进度条
 void osgQtViewer::showProcess(int64_t size, QString fileName)
 {
+	qDebug() << "process" << endl << QString::number((unsigned int)QThread::currentThreadId()) << endl;
+	mutex.lock();
 	qDebug() << "in process";
 	qDebug() << size;
 	QProgressDialog *progressDlg = new QProgressDialog(this);
 	progressDlg->blockSignals(false);
 	progressDlg->setWindowModality(Qt::WindowModal);
 	progressDlg->setMinimumDuration(0);//dialog出现需等待的时间
-	progressDlg->setWindowTitle("Please Wait...");
+	progressDlg->setWindowTitle("Please Wait");
 	progressDlg->setLabelText(fileName);
 	progressDlg->setCancelButtonText("Cancel");
 	progressDlg->setRange(0, size);
@@ -458,6 +462,7 @@ void osgQtViewer::showProcess(int64_t size, QString fileName)
 	qDebug() << process << " " << size;
 	progressDlg->setValue(size);
 	qDebug() << "out process";
+	mutex.unlock();
 }
 
 
@@ -470,7 +475,15 @@ void osgQtViewer::updateTXT(QString filePath, QString fileName, osg::ref_ptr<osg
 	fileNames.push_back(fileName);
 	filePathes.push_back(filePath);
 	resentFiles.insert(filePath);
-	g_widget->addNode(vertices, colors, fileName);
+	//g_widget->addNode(vertices, colors, fileName);
+	void(QtOSGWidget::*addNode)(osg::ref_ptr<osg::Vec3Array> vertices, osg::ref_ptr<osg::Vec4Array> colors, QString file_name) = &QtOSGWidget::addNode;
+	std::thread t(std::bind(addNode, g_widget, vertices, colors, fileName));
+	t.join();
+	ostringstream oss;
+	oss << this_thread::get_id();
+	string stid = oss.str();
+	unsigned long long tid = std::stoull(stid);
+	qDebug() << "updatetxt" << endl <<stid.c_str() << endl;
 }
 
 //读取osg
@@ -482,8 +495,10 @@ void osgQtViewer::updateOSG(QString filePath, QString fileName, osg::ref_ptr<osg
 	fileNames.push_back(fileName);
 	filePathes.push_back(filePath);
 	resentFiles.insert(filePath);
-
-	g_widget->addNode(node, fileName);
+	void(QtOSGWidget::*addNode)(osg::ref_ptr<osg::Node> node, QString file_name) = &QtOSGWidget::addNode;
+	std::thread t(std::bind(addNode, g_widget, node, fileName));
+	t.join();
+	//g_widget->addNode(node, fileName);
 }
 
 //显示栏选中状态动作
